@@ -17,6 +17,98 @@ bot.on('guildBanAdd', (guild, user) => {
     })
 })
 
+bot.on('raw', (packet) => {
+    if (!['MESSAGE_REACTION_ADD', 'MESSAGE_REACTION_REMOVE'].includes(packet.t)) return;
+    bot.channels.fetch(packet.d.channel_id).then(channel => {
+        if (channel.messages.cache.has(packet.d.message_id)) return;
+        channel.messages.fetch(packet.d.message_id).then(message => {
+            const emoji = packet.d.emoji.id ? `${packet.d.emoji.name}:${packet.d.emoji.id}` : packet.d.emoji.name;
+            const reaction = message.reactions.cache.get(emoji);
+            if (reaction) reaction.users.cache.set(packet.d.user_id, bot.users.cache.get(packet.d.user_id));
+            if (packet.t === 'MESSAGE_REACTION_ADD') {
+                bot.emit('messageReactionAdd', reaction, bot.users.cache.get(packet.d.user_id));
+            }
+            if (packet.t === 'MESSAGE_REACTION_REMOVE') {
+                bot.emit('messageReactionRemove', reaction, bot.users.cache.get(packet.d.user_id));
+            }
+        });
+    })
+})
+
+bot.on('messageReactionAdd', (reaction, user) => {
+    if (reaction.message.channel.id === '739660759214194839') {
+        if (!['%E2%9D%8C', '%F0%9F%A4%94', '%E2%9C%85'].includes(reaction.emoji.identifier)) return;
+        reaction.message.embeds.forEach(embed => {
+            const requester = reaction.message.guild.members.cache.get(embed.footer.text)
+            if (reaction.emoji.identifier === '%E2%9D%8C') {
+                let response = reaction.message.channel.send('Ticket has been rejected :x: :sob:.')
+                requester.send(':x:')
+                requester.send('Your ticket has been rejected :sob:. You may request again in `[3]` updates. Collaborators may respond for more information.')
+                const reasons = new Discord.MessageEmbed()
+                .setAuthor(bot.user.username, bot.user.displayAvatarURL)
+                .setTitle('Reasoning (Most Common Reasons-Least Common Reasons)')
+                .addField('1', 'Feature has already been requested.')
+                .addField('2', 'Feature is out of scope due to code limitations (jutsu systems).')
+                .addField('3', 'Feature may be unfair or "OP".')
+                .addField('4', 'Feature ponders from BeNM\'s goal.')
+                .setColor('BLUE')
+                requester.send(reasons)
+                setTimeout(function() {
+                    reaction.message.delete()
+                    response.then(msg => {
+                        msg.delete()
+                    })
+                }, 5000)
+            }
+            else if (reaction.emoji.identifier === '%F0%9F%A4%94') {
+                let response = reaction.message.channel.send('Ticket has been planned :thinking: :relieved:.')
+                bot.channels.fetch('750067818170679557').then(c => {
+                    c.send(reaction.message.embeds)
+                    c.send(' :thinking: `^Planned!^`.')
+                })
+                requester.send(':thinking:')
+                requester.send('Your ticket has been planned :relieved:. Normal requests see light under [3] updates. Collaborators may respond for questions, or information regarding the ticket. You\'ll automatically be notified by me when it gets ingame :wink:.')
+                setTimeout(function() {
+                    response.then(msg => {
+                        msg.delete()
+                    })
+                }, 5000)
+            }
+            else if (reaction.emoji.identifier === '%E2%9C%85') {
+                let flag = false
+                reaction.message.reactions.cache.forEach(mr => {
+                    if (mr.emoji.identifier === '%F0%9F%A4%94') {
+                        flag = true
+                    }
+                })
+                if (flag) {
+                    let response = reaction.message.channel.send('Ticket has been added :white_check_mark: :smile:.')
+                    bot.channels.fetch('750067818170679557').then(c => {
+                        c.send(reaction.message.embeds)
+                        c.send(' :confetti_ball: :white_check_mark: `^Added!^`.')
+                    })
+                    requester.send(':white_check_mark:')
+                    requester.send('Your ticket has been added :smile:. Make sure to install the latest update :confetti_ball:. Collaborators may respond if there was any changes to the original request.')
+                    setTimeout(function() {
+                        reaction.message.delete()
+                        response.then(msg => {
+                            msg.delete()
+                        })
+                    }, 5000)
+                }
+                else {
+                    let nope = reaction.message.channel.send('Feature hasn\'t been planned. If it is already ingame, respond with :x:.')
+                    setTimeout(function() {
+                        nope.then(msg => {
+                            msg.delete()
+                        })
+                    }, 5000)
+                }
+            }
+        })
+    }
+})
+
 bot.on('userUpdate', (user) => {
     console.log(user.username)
 })
@@ -194,7 +286,7 @@ bot.on('message', message => {
                 .setAuthor(message.author.username + `-${requestNum}`, message.author.displayAvatarURL)
                 .addField('Mod or API request', modOrApi)
                 .addField('Information', info)
-                .setFooter(`${message.author.id}-${requestNum}`)
+                .setFooter(`${message.author.id}`)
                 .setColor('GREEN')
             message.delete()
             let creationMessage = message.channel.send(`Request ticket created from ${message.author} for ${modOrApi}. It will be reviewed soon :thinking: :grimacing: ...`)
@@ -209,10 +301,9 @@ bot.on('message', message => {
             }, 15000)
             bot.channels.fetch('739660759214194839').then(c => {
                 c.send(requestTicket)
-                c.send(`Respond to this ticket in the DMs of ${message.author.username}.`)
             })
             message.author.send(requestTicket)
-            message.author.send(`You made a feature request :sunglasses:, the ID is ${requestNum}. You'll get updates/questions here from Collaborators, watch out for the changelog too :eyes:!`)
+            message.author.send(`You made a feature request :sunglasses:, the ID is ${requestNum}. You'll get updates/questions here from Collaborators and I, watch out for new messages in #planned-added-features and #change-log too :eyes:!`)
             console.log(`New request ticket from ${message.author}, for ${modOrApi}. That would ${info}`)
         }
         else {
