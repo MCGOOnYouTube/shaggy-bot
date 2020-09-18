@@ -1,7 +1,7 @@
 const Discord = require('discord.js');
 const bot = new Discord.Client();
 const prefix = `shaggy`;
-const token = 'NzMzMzYyOTg3NTUyNzM1MzIz.XxCDgQ.mbhghhFvxcDhj8NweK9yPzjz8qo';
+const token = 'NzMzMzYyOTg3NTUyNzM1MzIz.XxCDgQ.mKqtLfGBEZu0-h1qfoh5QiD-0Z0';
 const date = new Date();
 
 const db = require('quick.db')
